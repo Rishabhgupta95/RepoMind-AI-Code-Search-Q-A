@@ -13,34 +13,49 @@ def get_client() -> QdrantClient:
 
 def ensure_collection(vector_size: int) -> None:
     client = get_client()
+
     collection_names = {
         item.name for item in client.get_collections().collections
     }
+
     if COLLECTION_NAME not in collection_names:
-        client.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=models.VectorParams(
-                size=vector_size,
-                distance=models.Distance.COSINE,
-            ),
-        )
-        return
+        try:
+            client.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=models.VectorParams(
+                    size=vector_size,
+                    distance=models.Distance.COSINE,
+                ),
+            )
+        except Exception:
+            # Another task/process may have created the collection
+            # after our initial existence check.
+            collection_names = {
+                item.name
+                for item in client.get_collections().collections
+            }
+            if COLLECTION_NAME not in collection_names:
+                raise
 
     collection = client.get_collection(COLLECTION_NAME)
     configured_vectors = collection.config.params.vectors
+
     if isinstance(configured_vectors, dict):
         raise ValueError(
-            f"Qdrant collection {COLLECTION_NAME!r} uses named vectors, which this "
-            "service does not support. Use a new collection name or migrate the collection."
-        )
-    existing_size = getattr(configured_vectors, "size", None)
-    if existing_size is not None and existing_size != vector_size:
-        raise ValueError(
-            f"Qdrant collection {COLLECTION_NAME!r} uses {existing_size}-dimensional "
-            f"vectors, but the selected model produces {vector_size}. Use a new "
-            "collection name or recreate the existing collection."
+            f"Qdrant collection {COLLECTION_NAME!r} uses named vectors, "
+            "which this service does not support. Use a new collection "
+            "name or migrate the collection."
         )
 
+    existing_size = getattr(configured_vectors, "size", None)
+
+    if existing_size is not None and existing_size != vector_size:
+        raise ValueError(
+            f"Qdrant collection {COLLECTION_NAME!r} uses "
+            f"{existing_size}-dimensional vectors, but the selected "
+            f"model produces {vector_size}. Use a new collection "
+            "name or recreate the existing collection."
+        )
 
 def upsert_points(points: list[models.PointStruct]) -> None:
     if points:

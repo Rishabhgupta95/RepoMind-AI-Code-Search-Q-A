@@ -8,7 +8,7 @@ from .config import EMBEDDING_MODEL
 @lru_cache(maxsize=1)
 def get_model() -> SentenceTransformer:
     """Load the embedding model once, on first use rather than API startup."""
-    return SentenceTransformer(EMBEDDING_MODEL)
+    return SentenceTransformer(EMBEDDING_MODEL, device="cpu")
 
 
 def embedding_dimension() -> int:
