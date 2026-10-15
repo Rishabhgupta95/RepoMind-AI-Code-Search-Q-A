@@ -10,6 +10,7 @@ from .llm import answer_from_context
 from .repository import repository_key
 from .retriever import search_code
 from .task_tracker import create_task, get_task, update_task
+from fastapi.middleware.cors import CORSMiddleware
 
 
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,19 @@ app = FastAPI(
     title="Code RAG",
     description="Index repositories and ask questions grounded in their source code.",
     version="0.2.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "*",  # during development, later restrict to frontend origin
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],  # or list: ["GET", "POST", "OPTIONS"]
+    allow_headers=["*"],
 )
 
 
